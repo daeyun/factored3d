@@ -49,19 +49,20 @@ def main():
     renderer = demo_utils.DemoRenderer(opts)
     # Load input data
 
-    with open('/data2/scene3d/v8/test_v2_subset_factored3d.txt', 'r') as f:
+    with open('/data3/nyu/eval.txt', 'r') as f:
         lines = f.readlines()
     names = [item.strip() for item in lines if item.strip()]
 
     for i, name in enumerate(names):
         print(i, name)
 
-        img = scipy.misc.imread('/data2/pbrs/mlt_v2/{}_mlt.png'.format(name))
+        img = scipy.misc.imread('/data3//nyu/images/{}.jpg'.format(name))
+        img = img[3:-3]  # avoid aspect ratio stretching.
         img_fine = scipy.misc.imresize(img, (opts.img_height_fine, opts.img_width_fine))
         img_fine = np.transpose(img_fine, (2, 0, 1))
         img_coarse = scipy.misc.imresize(img, (opts.img_height, opts.img_width))
         img_coarse = np.transpose(img_coarse, (2, 0, 1))
-        proposals = sio.loadmat('/data3/factored3d/edgebox_proposals/{}_proposals.mat'.format(name))['proposals'][:, 0:4]
+        proposals = sio.loadmat('/data3/nyu/edgebox_proposals/{}_proposals.mat'.format(name))['proposals'][:, 0:4]
         inputs = {}
         inputs['img'] = torch.from_numpy(img_coarse / 255.0).unsqueeze(0)
         inputs['img_fine'] = torch.from_numpy(img_fine / 255.0).unsqueeze(0)
@@ -69,7 +70,7 @@ def main():
         tester.set_input(inputs)
         objects, layout = tester.predict_factored3d()
 
-        mesh_dir = '/data3/out/scene3d/factored3d_pred/{}/'.format(name)
+        mesh_dir = '/data3/out/scene3d/factored3d_pred/nyu/{}/'.format(name)
         ensure_dir_exists(mesh_dir)
 
         # uses a modified version of their code.

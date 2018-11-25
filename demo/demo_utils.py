@@ -28,7 +28,6 @@ from ..utils import metrics
 
 from ..renderer import utils as render_utils
 
-
 curr_path = osp.dirname(osp.abspath(__file__))
 cache_path = osp.join(curr_path, '..', 'cachedir')
 flags.DEFINE_string('rendering_dir', osp.join(cache_path, 'rendering'), 'Directory where intermittent renderings are saved')
@@ -214,7 +213,7 @@ class DemoTester(test_utils.Tester):
         pos_inds_vis = metrics.nms(
             np.concatenate((bboxes_pred, scores_pred), axis=1),
             0.3, min_score=min_score_vis)
-        
+
         codes_pred_vis = self.filter_pos(codes_pred_all, pos_inds_vis)
         rois_pos_vis = self.filter_pos([self.rois], pos_inds_vis)[0]
         codes_pred_vis[0] = self.decode_shape(codes_pred_vis[0])
@@ -222,7 +221,7 @@ class DemoTester(test_utils.Tester):
 
         layout_pred = self.layout_model.forward(self.input_imgs_orig)
         return codes_pred_vis, layout_pred
-    
+
     def predict_depth(self):
         depth_pred = self.depth_model.forward(self.input_imgs_orig)
         return depth_pred
@@ -248,7 +247,7 @@ class DemoRenderer():
             scale_x=self.opts.layout_width/640,
             scale_y=self.opts.layout_height/480
         )
-        mesh_file = osp.join(self.mesh_dir, prefix + '.obj')
+        mesh_file = osp.join(mesh_dir, prefix + '.obj')
         fout = open(mesh_file, 'w')
         render_utils.append_obj(fout, vs, fs)
         fout.close()
@@ -257,7 +256,7 @@ class DemoRenderer():
         n_rois = code_vars[0].size()[0]
         code_list = suncg_parse.uncollate_codes(code_vars, 1, torch.Tensor(n_rois).fill_(0))
         mesh_file = osp.join(mesh_dir, prefix + '.obj')
-        render_utils.save_parse(mesh_file, code_list[0], save_objectwise=False, thresh=0.1)
+        render_utils.save_parse(mesh_file, code_list[0], save_objectwise=False, thresh=0.25)
 
     def render_visuals(self, mesh_dir, obj_name=None):
         png_dir = osp.join(mesh_dir, 'rendering')
@@ -272,11 +271,11 @@ class DemoRenderer():
         return im_view1, im_view2
 
     def render_factored3d(self, codes, layout):
-        os.system('rm {}/*.obj'.format(self.mesh_dir))
+        # os.system('rm {}/*.obj'.format(self.mesh_dir))
         self.save_codes_mesh(self.mesh_dir, codes)
         self.save_layout_mesh(self.mesh_dir, layout)
-        return self.render_visuals(self.mesh_dir)
-    
+        # return self.render_visuals(self.mesh_dir)
+
     def render_scene_vox(self, scene_vox):
         opts = self.opts
         os.system('rm {}/*.obj'.format(self.mesh_dir))

@@ -14,24 +14,51 @@ cube_v = cube_v - 0.5
 
 cube_f = np.array([[1,  7,  5 ], [1,  3,  7 ], [1,  4,  3 ], [1,  2,  4 ], [3,  8,  7 ], [3,  4,  8 ], [5,  7,  8 ], [5,  8,  6 ], [1,  5,  6 ], [1,  6,  2 ], [2,  6,  8 ], [2,  8,  4]]).astype(np.int)
 
-def voxels_to_mesh(pred_vol, thresh=0.5):
-    v_counter = 0
-    tot_points = np.greater(pred_vol, thresh).sum()
-    v_all = np.tile(cube_v, [tot_points, 1])
-    f_all = np.tile(cube_f, [tot_points, 1])
-    f_offset = np.tile(np.linspace(0, 12*tot_points-1, 12*tot_points), 3).reshape(3, 12*tot_points).transpose()
-    f_offset = (f_offset//12 * 8).astype(np.int)
-    f_all += f_offset
-    for x in range(pred_vol.shape[0]):
-        for y in range(pred_vol.shape[1]):
-            for z in range(pred_vol.shape[2]):
-                if pred_vol[x,y,z] > thresh:
-                    radius = pred_vol[x,y,z]
-                    v_all[v_counter:v_counter+8,:] *= radius
-                    v_all[v_counter:v_counter+8,:] += (np.array([[x, y, z]]) + 0.5)
-                    v_counter += 8
+import mcubes
 
-    return v_all, f_all
+
+def save_off(mesh, filename):
+    verts = mesh['v'].astype(np.float32)
+    faces = mesh['f'].astype(np.int32)
+
+    filename = os.path.expanduser(filename)
+    if not os.path.isdir(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
+
+    # Overwrite.
+    if os.path.exists(filename):
+        os.remove(filename)
+
+    with open(os.path.expanduser(filename), 'ab') as fp:
+        fp.write('OFF\n{} {} 0\n'.format(
+            verts.shape[0], faces.shape[0]).encode('utf-8'))
+        np.savetxt(fp, verts, fmt='%.5f')
+        np.savetxt(fp, np.hstack((3 * np.ones((
+            faces.shape[0], 1)), faces)), fmt='%d')
+
+
+def voxels_to_mesh(pred_vol, thresh=0.5):
+    pred_vol_thresholded = np.pad(pred_vol, [(1, 1), (1, 1), (1, 1)], 'constant', constant_values=(0,)) > thresh
+    v_all, f_all = mcubes.marching_cubes(pred_vol_thresholded, 0.5)
+    v_all = v_all - 1 + 0.5  # undo padding offset
+    return v_all, f_all + 1  # 1-indexing
+
+    # v_counter = 0
+    # tot_points = np.greater(pred_vol, thresh).sum()
+    # v_all = np.tile(cube_v, [tot_points, 1])
+    # f_all = np.tile(cube_f, [tot_points, 1])
+    # f_offset = np.tile(np.linspace(0, 12 * tot_points - 1, 12 * tot_points), 3).reshape(3, 12 * tot_points).transpose()
+    # f_offset = (f_offset // 12 * 8).astype(np.int)
+    # f_all += f_offset
+    # for x in range(pred_vol.shape[0]):
+    #     for y in range(pred_vol.shape[1]):
+    #         for z in range(pred_vol.shape[2]):
+    #             if pred_vol[x, y, z] > thresh:
+    #                 radius = pred_vol[x, y, z]
+    #                 v_all[v_counter:v_counter + 8, :] *= radius
+    #                 v_all[v_counter:v_counter + 8, :] += (np.array([[x, y, z]]) + 0.5)
+    #                 v_counter += 8
+    # return v_all, f_all
 
 
 def voxels_to_points(pred_vol, thresh=0.5):
